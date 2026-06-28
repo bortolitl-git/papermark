@@ -45,16 +45,7 @@ export const sendEmail = async ({
   const plainText = toPlainText(html);
 
   const fromAddress =
-    from ??
-    (marketing
-      ? "Marc from Papermark <marc@ship.papermark.io>"
-      : system
-        ? "Papermark <system@papermark.io>"
-        : verify
-          ? "Papermark <system@verify.papermark.io>"
-          : !!scheduledAt
-            ? "Marc Seitz <marc@papermark.io>"
-            : "Marc from Papermark <marc@papermark.io>");
+    from ?? "Autoinsp Dataroom <onboarding@resend.dev>";
 
   try {
     const { data, error } = await resend.emails.send({
