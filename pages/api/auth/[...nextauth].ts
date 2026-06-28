@@ -122,7 +122,7 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         // When working on localhost, the cookie domain must be omitted entirely (https://stackoverflow.com/a/1188145)
-        domain: VERCEL_DEPLOYMENT ? ".papermark.com" : undefined,
+                    domain: undefined,
         secure: VERCEL_DEPLOYMENT,
       },
     },
@@ -211,7 +211,7 @@ const getAuthOptions = (req: NextApiRequest): NextAuthOptions => {
 
         // Apply rate limiting for signin attempts
         try {
-          if (req) {
+                    if (req && process.env.UPSTASH_REDIS_REST_URL) {
             const clientIP = getIpAddress(req.headers);
             const rateLimitResult = await checkRateLimit(
               rateLimiters.auth,
