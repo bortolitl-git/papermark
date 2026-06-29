@@ -35,6 +35,26 @@ export const config = {
   maxDuration: 180,
 };
 
+// Restrict who can create an account / sign in to the team dashboard.
+// Investors are NOT affected: they view documents via per-link email gates,
+// not NextAuth accounts. Defaults to the autoinsp.com domain so the control is
+// active by default (no lockout, no env required); extend without a code change
+// via ALLOWED_LOGIN_DOMAINS / ALLOWED_LOGIN_EMAILS (comma-separated).
+const isEmailAllowedToSignIn = (email?: string | null): boolean => {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  const domain = normalized.split("@")[1] ?? "";
+  const allowedDomains = (process.env.ALLOWED_LOGIN_DOMAINS ?? "autoinsp.com")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const allowedEmails = (process.env.ALLOWED_LOGIN_EMAILS ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  return allowedDomains.includes(domain) || allowedEmails.includes(normalized);
+};
+
 export const authOptions: NextAuthOptions = {
   pages: {
     error: "/login",
@@ -67,6 +87,16 @@ export const authOptions: NextAuthOptions = {
     }),
     EmailProvider({
       async sendVerificationRequest({ identifier, url }) {
+        // Don't even send a magic link to addresses that aren't allowed to sign
+        // in — this prevents the public login endpoint from being abused to
+        // email arbitrary addresses.
+        if (!isEmailAllowedToSignIn(identifier)) {
+          console.log(
+            `[auth] Blocked magic-link request for non-allowlisted email: ${identifier}`,
+          );
+          return;
+        }
+
         const hasValidNextAuthUrl = !!process.env.NEXTAUTH_URL;
         let finalUrl = url;
 
@@ -199,7 +229,11 @@ const getAuthOptions = (req: NextApiRequest): NextAuthOptions => {
     callbacks: {
       ...authOptions.callbacks,
       signIn: async ({ user }) => {
-        if (!user.email || (await isBlacklistedEmail(user.email))) {
+        if (
+          !user.email ||
+          (await isBlacklistedEmail(user.email)) ||
+          !isEmailAllowedToSignIn(user.email)
+        ) {
           await identifyUser(user.email ?? user.id);
           await trackAnalytics({
             event: "User Sign In Attempted",
