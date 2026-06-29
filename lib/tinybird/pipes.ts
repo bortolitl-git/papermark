@@ -4,7 +4,12 @@ import { z } from "zod";
 import { VIDEO_EVENT_TYPES } from "../constants";
 import { WEBHOOK_TRIGGERS } from "../webhook/constants";
 
-const tb = new Tinybird({ token: process.env.TINYBIRD_TOKEN! });
+const tb = new Tinybird({
+  token: process.env.TINYBIRD_TOKEN!,
+  // Tinybird is regional — override to the workspace region via TINYBIRD_API_URL
+  // (e.g. https://api.us-east.aws.tinybird.co). Wrong region => non-JSON error.
+  baseUrl: process.env.TINYBIRD_API_URL || "https://api.tinybird.co",
+});
 
 // Tinybird is optional on self-hosted setups. Make every read pipe fail-soft so
 // analytics never 500s:

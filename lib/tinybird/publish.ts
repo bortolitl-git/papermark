@@ -4,7 +4,13 @@ import { z } from "zod";
 import { VIDEO_EVENT_TYPES } from "../constants";
 import { WEBHOOK_TRIGGERS } from "../webhook/constants";
 
-const tb = new Tinybird({ token: process.env.TINYBIRD_TOKEN! });
+const tb = new Tinybird({
+  token: process.env.TINYBIRD_TOKEN!,
+  // Tinybird is regional. Default to the global host, but allow overriding to the
+  // workspace's region (e.g. https://api.us-east.aws.tinybird.co) — hitting the
+  // wrong region returns a non-JSON error ("You made a request...").
+  baseUrl: process.env.TINYBIRD_API_URL || "https://api.tinybird.co",
+});
 
 export const publishPageView = tb.buildIngestEndpoint({
   datasource: "page_views__v3",
