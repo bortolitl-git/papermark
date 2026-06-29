@@ -84,6 +84,12 @@ export default async function handler(
     return res.status(200).json(jsonResponse);
   } catch (error) {
     // The webhook will retry 5 times waiting for a 200
+    console.error(
+      "[image-upload] handleUpload failed:",
+      (error as Error)?.message,
+      "| BLOB_READ_WRITE_TOKEN present:",
+      !!process.env.BLOB_READ_WRITE_TOKEN,
+    );
     return res.status(400).json({ error: (error as Error).message });
   }
 }
