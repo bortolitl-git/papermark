@@ -134,6 +134,14 @@ export default async function handle(
       return res.status(400).json({
         message: "Notion document preview coming soon",
       });
+    } else if (primaryVersion.type === "pdf") {
+      // PDF without pre-rendered pages (e.g. self-hosted without background
+      // conversion): fall back to streaming the original file so the client
+      // renders it directly instead of showing "still processing".
+      returnData.file = await getFile({
+        data: primaryVersion.file,
+        type: primaryVersion.storageType,
+      });
     } else {
       // Check if document should be processed but isn't
       const shouldHavePages = ["pdf", "docs", "slides", "cad"].includes(
