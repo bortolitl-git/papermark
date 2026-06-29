@@ -6,35 +6,10 @@ export default async function DomainMiddleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const host = req.headers.get("host");
 
-  // If it's the root path, redirect to papermark.com/home
+  // Root path = custom domain hit without a link slug. Send visitors to the
+  // main Autoinsp site instead of the Papermark marketing page.
   if (path === "/") {
-    if (host === "guide.permithealth.com") {
-      return NextResponse.redirect(
-        new URL("https://guide.permithealth.com/faq", req.url),
-      );
-    }
-
-    if (host === "fund.tradeair.in") {
-      return NextResponse.redirect(
-        new URL("https://tradeair.in/sv-fm-inbound", req.url),
-      );
-    }
-
-    if (host === "docs.pashupaticapital.com") {
-      return NextResponse.redirect(
-        new URL("https://www.pashupaticapital.com/", req.url),
-      );
-    }
-
-    if (host === "partners.braxtech.net") {
-      return NextResponse.redirect(
-        new URL("https://partners.braxtech.net/investors", req.url),
-      );
-    }
-
-    return NextResponse.redirect(
-      new URL("https://www.papermark.com/home", req.url),
-    );
+    return NextResponse.redirect(new URL("https://autoinsp.com", req.url));
   }
 
   const url = req.nextUrl.clone();
