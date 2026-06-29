@@ -54,7 +54,16 @@ export default async function handler(
 
     const { client, config } = await getTeamS3ClientAndConfig(teamId);
 
-    if (config.distributionHost) {
+    // Only sign via CloudFront when an actual CloudFront key pair is configured.
+    // On self-hosted setups (e.g. Supabase S3) distributionHost is set for
+    // next.config image patterns, but there is no CloudFront private key — in
+    // that case fall through to a plain S3 presigned URL. Otherwise the signer
+    // tries to parse an empty key and throws "DECODER routines::unsupported".
+    if (
+      config.distributionHost &&
+      config.distributionKeyId &&
+      config.distributionKeyContents
+    ) {
       const distributionUrl = new URL(
         key,
         `https://${config.distributionHost}`,
