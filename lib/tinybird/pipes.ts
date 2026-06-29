@@ -6,14 +6,29 @@ import { WEBHOOK_TRIGGERS } from "../webhook/constants";
 
 const tb = new Tinybird({ token: process.env.TINYBIRD_TOKEN! });
 
-// On self-hosted setups without TINYBIRD_TOKEN, analytics events aren't ingested
-// and calling a read pipe would hit the Tinybird API with no token and throw,
-// 500-ing every analytics endpoint. Degrade gracefully: when the token is
-// absent, every pipe returns an empty result set so the endpoints fall back to
-// visit-level data (from Postgres) instead of failing.
-const buildPipe: typeof tb.buildPipe = process.env.TINYBIRD_TOKEN
-  ? tb.buildPipe.bind(tb)
-  : ((..._args: any[]) => async () => ({ data: [] })) as any;
+// Tinybird is optional on self-hosted setups. Make every read pipe fail-soft so
+// analytics never 500s:
+//   - No TINYBIRD_TOKEN  -> return an empty result set (events aren't ingested).
+//   - Token set but the pipe errors (not deployed yet, query error, etc.)
+//     -> log and return empty, so a partial Tinybird setup still works and the
+//        endpoints fall back to visit-level data (from Postgres).
+const buildPipe: typeof tb.buildPipe = ((config: any) => {
+  if (!process.env.TINYBIRD_TOKEN) {
+    return async () => ({ data: [] });
+  }
+  const pipe: any = tb.buildPipe(config);
+  return async (...args: any[]) => {
+    try {
+      return await pipe(...args);
+    } catch (error) {
+      console.error(
+        `Tinybird pipe '${config?.pipe}' failed; returning empty result:`,
+        error,
+      );
+      return { data: [] };
+    }
+  };
+}) as any;
 
 export const getTotalAvgPageDuration = buildPipe({
   pipe: "get_total_average_page_duration__v5",
