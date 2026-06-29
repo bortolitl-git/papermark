@@ -20,3 +20,5 @@ SQL >
     ORDER BY timestamp ASC
 
 
+
+TYPE endpoint
