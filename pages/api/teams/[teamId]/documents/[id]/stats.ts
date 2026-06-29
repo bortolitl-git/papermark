@@ -132,24 +132,47 @@ export default async function handle(
         (view) => !allExcludedViews.map((view) => view.id).includes(view.id),
       );
 
-      const [duration, totalDocumentDuration] = await Promise.all([
-        getTotalAvgPageDuration({
-          documentId: docId,
-          excludedLinkIds: "",
-          excludedViewIds: allExcludedViews.map((view) => view.id).join(","),
-          since: 0,
-        }),
-        getTotalDocumentDuration({
-          documentId: docId,
-          excludedLinkIds: "",
-          excludedViewIds: allExcludedViews.map((view) => view.id).join(","),
-          since: 0,
-        }),
-      ]);
+      // Per-page / total durations come from Tinybird. On self-hosted setups
+      // without TINYBIRD_TOKEN these are unavailable — degrade gracefully to
+      // visit-level data (who/when/#visits) from Postgres instead of failing
+      // the whole analytics page with a 500.
+      let duration: { data: any[] } = { data: [] };
+      let totalDocumentDuration: { data: { sum_duration: number }[] } = {
+        data: [{ sum_duration: 0 }],
+      };
+      if (process.env.TINYBIRD_TOKEN) {
+        try {
+          [duration, totalDocumentDuration] = await Promise.all([
+            getTotalAvgPageDuration({
+              documentId: docId,
+              excludedLinkIds: "",
+              excludedViewIds: allExcludedViews
+                .map((view) => view.id)
+                .join(","),
+              since: 0,
+            }),
+            getTotalDocumentDuration({
+              documentId: docId,
+              excludedLinkIds: "",
+              excludedViewIds: allExcludedViews
+                .map((view) => view.id)
+                .join(","),
+              since: 0,
+            }),
+          ]);
+        } catch (error) {
+          console.error(
+            "Tinybird duration query failed; returning visit-level data only:",
+            error,
+          );
+        }
+      }
 
-      // Calculate average completion rate for all filtered views
+      // Calculate average completion rate for all filtered views.
+      // Completion rate is derived from per-page/video events stored in
+      // Tinybird; without it, leave the rate at 0 rather than failing.
       let avgCompletionRate = 0;
-      if (filteredViews.length > 0) {
+      if (process.env.TINYBIRD_TOKEN && filteredViews.length > 0) {
         if (document.type === "video") {
           // For video documents, calculate based on unique watch time
           const videoEvents = await getVideoEventsByDocument({
@@ -216,8 +239,10 @@ export default async function handle(
         views: filteredViews,
         duration,
         total_duration:
-          (totalDocumentDuration.data[0].sum_duration * 1.0) /
-          filteredViews.length,
+          filteredViews.length > 0 && totalDocumentDuration.data[0]
+            ? (totalDocumentDuration.data[0].sum_duration * 1.0) /
+              filteredViews.length
+            : 0,
         avgCompletionRate: Math.round(avgCompletionRate),
         totalViews: filteredViews.length,
       };

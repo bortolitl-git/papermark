@@ -6,7 +6,16 @@ import { WEBHOOK_TRIGGERS } from "../webhook/constants";
 
 const tb = new Tinybird({ token: process.env.TINYBIRD_TOKEN! });
 
-export const getTotalAvgPageDuration = tb.buildPipe({
+// On self-hosted setups without TINYBIRD_TOKEN, analytics events aren't ingested
+// and calling a read pipe would hit the Tinybird API with no token and throw,
+// 500-ing every analytics endpoint. Degrade gracefully: when the token is
+// absent, every pipe returns an empty result set so the endpoints fall back to
+// visit-level data (from Postgres) instead of failing.
+const buildPipe: typeof tb.buildPipe = process.env.TINYBIRD_TOKEN
+  ? tb.buildPipe.bind(tb)
+  : ((..._args: any[]) => async () => ({ data: [] })) as any;
+
+export const getTotalAvgPageDuration = buildPipe({
   pipe: "get_total_average_page_duration__v5",
   parameters: z.object({
     documentId: z.string(),
@@ -21,7 +30,7 @@ export const getTotalAvgPageDuration = tb.buildPipe({
   }),
 });
 
-export const getViewPageDuration = tb.buildPipe({
+export const getViewPageDuration = buildPipe({
   pipe: "get_page_duration_per_view__v5",
   parameters: z.object({
     documentId: z.string(),
@@ -35,7 +44,7 @@ export const getViewPageDuration = tb.buildPipe({
   }),
 });
 
-export const getTotalDocumentDuration = tb.buildPipe({
+export const getTotalDocumentDuration = buildPipe({
   pipe: "get_total_document_duration__v1",
   parameters: z.object({
     documentId: z.string(),
@@ -49,7 +58,7 @@ export const getTotalDocumentDuration = tb.buildPipe({
   }),
 });
 
-export const getTotalLinkDuration = tb.buildPipe({
+export const getTotalLinkDuration = buildPipe({
   pipe: "get_total_link_duration__v1",
   parameters: z.object({
     linkId: z.string(),
@@ -64,7 +73,7 @@ export const getTotalLinkDuration = tb.buildPipe({
   }),
 });
 
-export const getTotalViewerDuration = tb.buildPipe({
+export const getTotalViewerDuration = buildPipe({
   pipe: "get_total_viewer_duration__v1",
   parameters: z.object({
     viewIds: z.string().describe("Comma separated viewIds"),
@@ -76,7 +85,7 @@ export const getTotalViewerDuration = tb.buildPipe({
   }),
 });
 
-export const getViewUserAgent_v2 = tb.buildPipe({
+export const getViewUserAgent_v2 = buildPipe({
   pipe: "get_useragent_per_view__v2",
   parameters: z.object({
     documentId: z.string(),
@@ -92,7 +101,7 @@ export const getViewUserAgent_v2 = tb.buildPipe({
   }),
 });
 
-export const getViewUserAgent = tb.buildPipe({
+export const getViewUserAgent = buildPipe({
   pipe: "get_useragent_per_view__v3",
   parameters: z.object({
     viewId: z.string(),
@@ -106,7 +115,7 @@ export const getViewUserAgent = tb.buildPipe({
   }),
 });
 
-export const getTotalDataroomDuration = tb.buildPipe({
+export const getTotalDataroomDuration = buildPipe({
   pipe: "get_total_dataroom_duration__v1",
   parameters: z.object({
     dataroomId: z.string(),
@@ -120,7 +129,7 @@ export const getTotalDataroomDuration = tb.buildPipe({
   }),
 });
 
-export const getDocumentDurationPerViewer = tb.buildPipe({
+export const getDocumentDurationPerViewer = buildPipe({
   pipe: "get_document_duration_per_viewer__v1",
   parameters: z.object({
     documentId: z.string(),
@@ -131,7 +140,7 @@ export const getDocumentDurationPerViewer = tb.buildPipe({
   }),
 });
 
-export const getWebhookEvents = tb.buildPipe({
+export const getWebhookEvents = buildPipe({
   pipe: "get_webhook_events__v1",
   parameters: z.object({
     webhookId: z.string(),
@@ -149,7 +158,7 @@ export const getWebhookEvents = tb.buildPipe({
   }),
 });
 
-export const getVideoEventsByDocument = tb.buildPipe({
+export const getVideoEventsByDocument = buildPipe({
   pipe: "get_video_events_by_document__v1",
   parameters: z.object({
     document_id: z.string(),
@@ -168,7 +177,7 @@ export const getVideoEventsByDocument = tb.buildPipe({
   }),
 });
 
-export const getVideoEventsByView = tb.buildPipe({
+export const getVideoEventsByView = buildPipe({
   pipe: "get_video_events_by_view__v1",
   parameters: z.object({
     document_id: z.string(),
@@ -182,7 +191,7 @@ export const getVideoEventsByView = tb.buildPipe({
   }),
 });
 
-export const getClickEventsByView = tb.buildPipe({
+export const getClickEventsByView = buildPipe({
   pipe: "get_click_events_by_view__v1",
   parameters: z.object({
     document_id: z.string(),
