@@ -12,7 +12,7 @@ import {
 } from "@/lib/trigger/convert-files";
 import { processVideo } from "@/lib/trigger/optimize-video-files";
 import { convertPdfToImageRoute } from "@/lib/trigger/pdf-to-image-route";
-import { getExtension } from "@/lib/utils";
+import { getExtension, log } from "@/lib/utils";
 import { conversionQueue } from "@/lib/utils/trigger-utils";
 import { sendDocumentCreatedWebhook } from "@/lib/webhook/triggers/document-created";
 import { sendLinkCreatedWebhook } from "@/lib/webhook/triggers/link-created";
@@ -137,9 +137,22 @@ export const processDocument = async ({
     },
   });
 
+  // Background conversion (page rendering, format conversion) runs via trigger.dev.
+  // On self-hosted setups without TRIGGER_SECRET_KEY, skip it: PDFs render client-side
+  // via the default PDF viewer (with per-page analytics); other formats simply aren't
+  // pre-rendered. Without this guard, the .trigger() calls throw and fail the upload.
+  const conversionEnabled = !!process.env.TRIGGER_SECRET_KEY;
+  if (!conversionEnabled) {
+    log({
+      message: `Skipping background conversion for document ${document.id} (type: ${type}) — TRIGGER_SECRET_KEY not set.`,
+      type: "info",
+    });
+  }
+
   // Trigger appropriate conversion tasks based on document type
   // Check if it's a Keynote file (slides type with Keynote content type)
   if (
+    conversionEnabled &&
     type === "slides" &&
     (contentType === "application/vnd.apple.keynote" ||
       contentType === "application/x-iwork-keynote-sffkey")
@@ -161,7 +174,7 @@ export const processDocument = async ({
         concurrencyKey: teamId,
       },
     );
-  } else if (type === "docs" || type === "slides") {
+  } else if (conversionEnabled && (type === "docs" || type === "slides")) {
     await convertFilesToPdfTask.trigger(
       {
         documentId: document.id,
@@ -181,7 +194,7 @@ export const processDocument = async ({
     );
   }
 
-  if (type === "cad") {
+  if (conversionEnabled && type === "cad") {
     await convertCadToPdfTask.trigger(
       {
         documentId: document.id,
@@ -202,6 +215,7 @@ export const processDocument = async ({
   }
 
   if (
+    conversionEnabled &&
     type === "video" &&
     contentType !== "video/mp4" &&
     contentType?.startsWith("video/")
@@ -228,7 +242,7 @@ export const processDocument = async ({
   }
 
   // skip triggering convert-pdf-to-image job for "notion" / "excel" documents
-  if (type === "pdf") {
+  if (conversionEnabled && type === "pdf") {
     await convertPdfToImageRoute.trigger(
       {
         documentId: document.id,
