@@ -34,6 +34,17 @@ export function useDocumentProgressStatus(
     text: "Initializing...",
   };
 
+  // Without a trigger.dev access token (e.g. self-hosted without trigger.dev),
+  // there is no background processing run to track. Treat the document as ready
+  // instead of leaving it stuck on "Converting document…" forever.
+  if (!publicAccessToken) {
+    return {
+      status: { state: "COMPLETED", progress: 100, text: "Processing complete" },
+      error,
+      run: undefined,
+    };
+  }
+
   // If we have no runs at all
   if (runs.length === 0) {
     return { status, error, run: undefined };
