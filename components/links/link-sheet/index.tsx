@@ -219,7 +219,12 @@ export default function LinkSheet({
     }
 
     const { previewToken } = await response.json();
-    const previewLink = `${process.env.NEXT_PUBLIC_MARKETING_URL}/view/${link.id}?previewToken=${previewToken}`;
+    // A link assigned to a custom domain can only be viewed via
+    // https://{domain}/{slug}; the generic /view/{id} path returns 404 for it.
+    const previewLink =
+      link.domainId && link.domainSlug && link.slug
+        ? `https://${link.domainSlug}/${link.slug}?previewToken=${previewToken}`
+        : `${process.env.NEXT_PUBLIC_MARKETING_URL}/view/${link.id}?previewToken=${previewToken}`;
     setIsLoading(false);
     const linkElement = document.createElement("a");
     linkElement.href = previewLink;
