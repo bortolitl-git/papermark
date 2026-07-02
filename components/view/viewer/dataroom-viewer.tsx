@@ -334,8 +334,11 @@ export default function DataroomViewer({
 
   const renderItem = (item: FolderOrDocument) => {
     if ("versions" in item) {
+      // PDFs render client-side even without pre-rendered pages (no trigger.dev
+      // in this self-hosted setup), so a page-less PDF is viewable, not
+      // "processing". Only docs/slides truly need server-side conversion first.
       const isProcessing =
-        ["docs", "slides", "pdf"].includes(item.versions[0].type) &&
+        ["docs", "slides"].includes(item.versions[0].type) &&
         !item.versions[0].hasPages;
 
       return (
