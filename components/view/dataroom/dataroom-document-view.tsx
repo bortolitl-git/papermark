@@ -127,8 +127,16 @@ export default function DataroomDocumentView({
 
   const [code, setCode] = useState<string | null>(null);
   const [isInvalidCode, setIsInvalidCode] = useState<boolean>(false);
+  // For a protected link we first try to load the document silently using the
+  // existing dataroom session cookie (set when the visitor entered the room).
+  // Only reveal the access form if that silent attempt fails. Non-protected
+  // links have nothing to check, so start already "checked".
+  const [sessionChecked, setSessionChecked] = useState<boolean>(!isProtected);
 
-  const handleSubmission = async (): Promise<void> => {
+  const handleSubmission = async (
+    opts?: { silent?: boolean },
+  ): Promise<void> => {
+    const silent = opts?.silent ?? false;
     setIsLoading(true);
     const response = await fetch("/api/views-dataroom", {
       method: "POST",
@@ -231,6 +239,16 @@ export default function DataroomDocumentView({
       }
     } else {
       const data = await response.json();
+
+      // Silent session check failed (no valid dataroom session): don't nag the
+      // visitor with an error — just reveal the access form so they can enter
+      // their email.
+      if (silent) {
+        setSessionChecked(true);
+        setIsLoading(false);
+        return;
+      }
+
       toast.error(data.message);
 
       if (data.resetVerification) {
@@ -253,20 +271,21 @@ export default function DataroomDocumentView({
     await handleSubmission();
   };
 
-  // If token is present, run handle submit which will verify token and get document
-  // If link is not submitted and does not have email / password protection, show the access form
+  // On mount, always attempt to load the document once. For a protected link
+  // this is a *silent* attempt: the server accepts the existing dataroom
+  // session cookie and returns the document without re-asking for email; if
+  // there's no valid session it fails quietly and we show the access form.
+  // Non-protected links (or token/preview flows) load directly.
   useEffect(() => {
     if (!didMount.current) {
-      if (
-        (!submitted && !isProtected) ||
-        token ||
-        preview ||
-        viewData.dataroomViewId ||
-        previewToken
-      ) {
-        handleSubmission();
-        didMount.current = true;
-      }
+      didMount.current = true;
+      const silent =
+        isProtected &&
+        !token &&
+        !preview &&
+        !viewData.dataroomViewId &&
+        !previewToken;
+      handleSubmission({ silent });
     }
   }, [
     submitted,
@@ -290,6 +309,16 @@ export default function DataroomDocumentView({
         setIsInvalidCode={setIsInvalidCode}
         brand={brand}
       />
+    );
+  }
+
+  // While the silent dataroom-session check is in flight, show a spinner
+  // instead of flashing the access form (the session may authenticate us).
+  if (!submitted && isProtected && !sessionChecked) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner className="h-20 w-20" />
+      </div>
     );
   }
 
