@@ -13,7 +13,7 @@ import { AwayPoster } from "./away-poster";
 
 // Self-hosted worker (copied from pdfjs-dist, exact version match) instead of
 // an external CDN — avoids transient deck-render failures when the CDN hiccups.
-pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `/vendor/pdf.worker.min.js`;
 
 export default function PDFViewer(props: any) {
   const { isPreview, linkId, documentId, viewId } = props.navData;

@@ -2,7 +2,7 @@ import { pdfjs } from "react-pdf";
 import * as XLSX from "xlsx";
 
 // Default to the self-hosted worker (exact version match, no external CDN).
-pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `/vendor/pdf.worker.min.js`;
 
 export const getPagesCount = async (arrayBuffer: ArrayBuffer) => {
   try {
@@ -16,7 +16,7 @@ export const getPagesCount = async (arrayBuffer: ArrayBuffer) => {
         console.warn("PDF worker error, trying fallback:", workerError);
 
         // Fall back to local worker
-        pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+        pdfjs.GlobalWorkerOptions.workerSrc = `/vendor/pdf.worker.min.js`;
 
         try {
           // Try again with local worker
