@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useSafePageViewTracker } from "@/lib/tracking/safe-page-view-tracker";
 import { getTrackingOptions } from "@/lib/tracking/tracking-config";
@@ -17,6 +17,19 @@ export default function AdvancedExcelViewer({
 }) {
   const { linkId, documentId, viewId, isPreview, dataroomId, brand } = navData;
   const pageNumber = 1;
+
+  // The Microsoft Office viewer occasionally hangs on "fetching your file" the
+  // first time it loads an uncached file. We can't read the cross-origin iframe
+  // to detect this, so after a delay we surface a non-blocking "reload" button
+  // that forces a fresh iframe load (a guided F5) if the viewer is still stuck.
+  const [reloadKey, setReloadKey] = useState(0);
+  const [showReloadHint, setShowReloadHint] = useState(false);
+
+  useEffect(() => {
+    setShowReloadHint(false);
+    const timer = setTimeout(() => setShowReloadHint(true), 12000);
+    return () => clearTimeout(timer);
+  }, [reloadKey]);
 
   const startTimeRef = useRef(Date.now());
   const visibilityRef = useRef<boolean>(true);
@@ -150,9 +163,19 @@ export default function AdvancedExcelViewer({
         className="relative mx-2 flex h-screen flex-col sm:mx-6 lg:mx-8"
       >
         <iframe
+          key={reloadKey}
           className="h-full w-full"
           src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file)}&wdPrint=0&action=embedview&wdAllowInteractivity=False`}
         ></iframe>
+        {showReloadHint && (
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="absolute right-3 top-3 z-50 rounded-md bg-black/70 px-3 py-1.5 text-xs font-medium text-white shadow-md backdrop-blur transition hover:bg-black/85"
+          >
+            Não carregou? Recarregar
+          </button>
+        )}
         <div
           className="absolute bottom-0 left-0 right-0 z-50 h-[26px] bg-gray-950"
           style={{
