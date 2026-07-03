@@ -4,7 +4,9 @@ import { Document, Page, pdfjs } from "react-pdf";
 
 import { DocumentPreviewData } from "@/lib/types/document-preview";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Self-hosted worker (copied from pdfjs-dist, exact version match) instead of
+// an external CDN — avoids transient render failures when the CDN hiccups.
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
 
 interface PreviewPdfViewerProps {
   documentData: DocumentPreviewData;

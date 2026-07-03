@@ -1,9 +1,8 @@
 import { pdfjs } from "react-pdf";
 import * as XLSX from "xlsx";
 
-// Default to CDN worker URL
-const cdnWorkerUrl = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-pdfjs.GlobalWorkerOptions.workerSrc = cdnWorkerUrl;
+// Default to the self-hosted worker (exact version match, no external CDN).
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
 
 export const getPagesCount = async (arrayBuffer: ArrayBuffer) => {
   try {

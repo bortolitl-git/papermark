@@ -11,7 +11,9 @@ import Nav from "@/components/view/nav";
 
 import { AwayPoster } from "./away-poster";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Self-hosted worker (copied from pdfjs-dist, exact version match) instead of
+// an external CDN — avoids transient deck-render failures when the CDN hiccups.
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
 
 export default function PDFViewer(props: any) {
   const { isPreview, linkId, documentId, viewId } = props.navData;
