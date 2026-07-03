@@ -15,6 +15,17 @@ import { AwayPoster } from "./away-poster";
 // an external CDN — avoids transient deck-render failures when the CDN hiccups.
 pdfjs.GlobalWorkerOptions.workerSrc = `/vendor/pdf.worker.min.js`;
 
+// IMPORTANT: keep this a stable reference. react-pdf reloads (and destroys)
+// the whole PDF document whenever the `options` prop identity changes; an
+// inline object recreated each render caused a getPage-after-destroy crash
+// ("Cannot read properties of null (reading 'sendWithPromise')") when the
+// viewer navigated pages quickly.
+const options = {
+  cMapUrl: "cmaps/",
+  cMapPacked: true,
+  standardFontDataUrl: "standard_fonts/",
+};
+
 export default function PDFViewer(props: any) {
   const { isPreview, linkId, documentId, viewId } = props.navData;
 
@@ -183,12 +194,6 @@ export default function PDFViewer(props: any) {
     setPageWidth(window.innerWidth);
     setLoading(false);
   }
-
-  const options = {
-    cMapUrl: "cmaps/",
-    cMapPacked: true,
-    standardFontDataUrl: "standard_fonts/",
-  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
