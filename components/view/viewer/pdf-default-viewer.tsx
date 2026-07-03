@@ -219,14 +219,14 @@ export default function PDFViewer(props: any) {
   }, [pageNumber]);
 
   // Go to next page
+  // Clamp inside the updater so bursts of fast clicks (which read the same
+  // stale pageNumber) can never overshoot past the first/last page.
   function goToNextPage() {
-    if (pageNumber >= numPages!) return;
-    setPageNumber((prevPageNumber) => prevPageNumber + 1);
+    setPageNumber((prev) => (numPages && prev >= numPages ? prev : prev + 1));
   }
 
   function goToPreviousPage() {
-    if (pageNumber <= 1) return;
-    setPageNumber((prevPageNumber) => prevPageNumber - 1);
+    setPageNumber((prev) => (prev <= 1 ? prev : prev - 1));
   }
 
   async function downloadfile(e: React.MouseEvent<HTMLButtonElement>) {
