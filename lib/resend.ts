@@ -44,8 +44,14 @@ export const sendEmail = async ({
   const html = await render(react);
   const plainText = toPlainText(html);
 
+  // Priority: explicit `from` > RESEND_FROM env (verified sending domain) >
+  // Resend's test sender. Set RESEND_FROM once a domain is verified in Resend
+  // (e.g. "Autoinsp <verify@verify.autoinsp.com>") so OTP/notification emails
+  // can reach any recipient instead of only the Resend account owner.
   const fromAddress =
-    from ?? "Autoinsp Dataroom <onboarding@resend.dev>";
+    from ??
+    process.env.RESEND_FROM ??
+    "Autoinsp Dataroom <onboarding@resend.dev>";
 
   try {
     const { data, error } = await resend.emails.send({
