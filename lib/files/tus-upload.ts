@@ -42,7 +42,10 @@ export function resumableUpload({
       });
 
       const upload = new tus.Upload(file, {
-        endpoint: `${process.env.NEXT_PUBLIC_BASE_URL}/api/file/tus`,
+        // Same-origin on purpose: the dashboard runs on several hosts (custom
+        // domain, branch alias) and a cross-origin endpoint would drop the
+        // session cookie, so the upload would come in unauthenticated.
+        endpoint: `${window.location.origin}/api/file/tus`,
         retryDelays: [0, 3000, 5000, 10000],
         uploadDataDuringCreation: true,
         removeFingerprintOnSuccess: true,

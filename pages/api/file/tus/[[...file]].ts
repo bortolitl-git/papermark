@@ -99,11 +99,18 @@ const tusServer = new Server({
   },
 });
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Get the session
-  const session = getServerSession(req, res, authOptions);
-  if (!session) {
-    return res.status(401).json({ message: "Unauthorized" });
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
+  // CORS preflight carries no cookies — let the tus server answer it.
+  if (req.method !== "OPTIONS") {
+    // `getServerSession` returns a promise: without awaiting it the check below
+    // was always truthy and left this upload endpoint open to anyone.
+    const session = await getServerSession(req, res, authOptions);
+    if (!session) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
   }
 
   return tusServer.handle(req, res);
