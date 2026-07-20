@@ -10,6 +10,17 @@ import type { Readable } from "stream";
 import { getFeatureFlags } from "@/lib/featureFlags";
 
 /**
+ * S3-compatible storage (Supabase Storage here) needs an explicit endpoint and
+ * path-style addressing — same as `getTeamS3ClientAndConfig`. On plain AWS the
+ * endpoint env is unset and this returns nothing, keeping the default behavior.
+ */
+function buildEndpointConfig(config: StorageConfig) {
+  return config.endpoint
+    ? { endpoint: config.endpoint, forcePathStyle: true }
+    : {};
+}
+
+/**
  * Team-aware S3Store that routes uploads to different S3 buckets
  * based on team storage preferences. Extends S3Store and dynamically
  * switches the S3 client and bucket based on team feature flags.
@@ -33,6 +44,7 @@ export class MultiRegionS3Store extends S3Store {
         accessKeyId: euConfig.accessKeyId,
         secretAccessKey: euConfig.secretAccessKey,
       },
+      ...buildEndpointConfig(euConfig),
     };
 
     super({
@@ -51,6 +63,7 @@ export class MultiRegionS3Store extends S3Store {
         accessKeyId: euConfig.accessKeyId,
         secretAccessKey: euConfig.secretAccessKey,
       },
+      ...buildEndpointConfig(euConfig),
     };
 
     this.euClient = new S3(euS3Config);
@@ -67,6 +80,7 @@ export class MultiRegionS3Store extends S3Store {
           accessKeyId: this.usConfig.accessKeyId,
           secretAccessKey: this.usConfig.secretAccessKey,
         },
+        ...buildEndpointConfig(this.usConfig),
       };
 
       this.usClient = new S3(usS3Config);
