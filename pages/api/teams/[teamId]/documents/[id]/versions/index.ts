@@ -120,18 +120,19 @@ export default async function handle(
         },
       });
 
-      // turn off isPrimary flag for all other versions
-      await prisma.documentVersion.updateMany({
-        where: {
-          documentId: documentId,
-          id: { not: version.id },
-        },
-        data: {
-          isPrimary: false,
-        },
-      });
+      // Same guard as `lib/api/documents/process-document.ts`: background
+      // conversion runs on trigger.dev, which isn't configured self-hosted.
+      // Without this the .trigger() calls throw and the new version 500s even
+      // though it was already created and promoted to primary.
+      const conversionEnabled = !!process.env.TRIGGER_SECRET_KEY;
+      if (!conversionEnabled) {
+        log({
+          message: `Skipping background conversion for version ${version.id} of document ${documentId} (type: ${type}) — TRIGGER_SECRET_KEY not set.`,
+          type: "info",
+        });
+      }
 
-      if (type === "docs" || type === "slides") {
+      if (conversionEnabled && (type === "docs" || type === "slides")) {
         await convertFilesToPdfTask.trigger(
           {
             documentVersionId: version.id,
@@ -152,6 +153,7 @@ export default async function handle(
       }
 
       if (
+        conversionEnabled &&
         type === "video" &&
         contentType !== "video/mp4" &&
         contentType?.startsWith("video/")
@@ -178,7 +180,7 @@ export default async function handle(
       }
 
       // trigger document uploaded event to trigger convert-pdf-to-image job
-      if (type === "pdf") {
+      if (conversionEnabled && type === "pdf") {
         await convertPdfToImageRoute.trigger(
           {
             documentId: documentId,
